@@ -161,9 +161,6 @@ function HeroScene() {
     const scene = sceneRef.current;
     if (!scene) return;
 
-    const isMobile = window.innerWidth < 768;
-    const scrollDist = isMobile ? "+=240%" : "+=300%";
-
     /* Update background directly on scene root — never transparent */
     const setSkyBg = (top: string, mid: string, bot: string) => {
       scene.style.background = `linear-gradient(180deg, ${top} 0%, ${mid} 55%, ${bot} 100%)`;
@@ -176,38 +173,31 @@ function HeroScene() {
       (scene.querySelector(".stars-a") as HTMLElement).style.opacity = "0";
       (scene.querySelector(".stars-b") as HTMLElement).style.opacity = "0";
       (scene.querySelector(".stars-c") as HTMLElement).style.opacity = "0";
+      (scene.querySelector(".hero-bottom-fade") as HTMLElement).style.opacity = "1";
       return;
     }
 
     const ctx = gsap.context(() => {
-      /* ── Labels (total timeline ~10 units) ── */
-      const TL_END = 10;
+      /* ── Labels (one compact hero scene) ── */
+      const TL_END = 6.6;
 
       /* ── Initial states ── */
       gsap.set(".horizon-glow",   { autoAlpha: 0 });
-      gsap.set(".sun-orb",        { y: "82vh", autoAlpha: 0 });
+      gsap.set(".sun-orb",        { y: "40vh", autoAlpha: 0.16 });
       gsap.set(".sun-rays",       { autoAlpha: 0, scale: 0.78, transformOrigin: "50% 50%" });
       gsap.set(".cloud-back",     { autoAlpha: 0, y: 22 });
       gsap.set(".cloud-mid",      { autoAlpha: 0, y: 16 });
       gsap.set(".cloud-front",    { autoAlpha: 0, y: 10 });
       gsap.set(".atmos-day",      { autoAlpha: 0 });
-      gsap.set(".task-social",    { autoAlpha: 0, y: 18 });
-      gsap.set(".task-email",     { autoAlpha: 0, y: 18 });
-      gsap.set(".task-handled",   { autoAlpha: 0 });
-      gsap.set(".copy-latenight", { autoAlpha: 0, y: 14 });
-      gsap.set(".copy-predawn",   { autoAlpha: 0, y: 14 });
-      gsap.set(".copy-dawn",      { autoAlpha: 0, y: 14 });
-      gsap.set(".copy-morning",   { autoAlpha: 0, y: 28 });
-      gsap.set(".hero-cta",       { autoAlpha: 0, y: 16 });
+      gsap.set(".hero-bottom-fade", { autoAlpha: 0 });
 
       const tl = gsap.timeline();
 
       tl.addLabel("night",        0);
-      tl.addLabel("lateNight",    1.3);
-      tl.addLabel("predawn",      2.2);
-      tl.addLabel("dawn",         4.0);
-      tl.addLabel("earlyMorning", 5.8);
-      tl.addLabel("daylight",     7.6);
+      tl.addLabel("predawn",      1.0);
+      tl.addLabel("dawn",         2.0);
+      tl.addLabel("earlyMorning", 3.7);
+      tl.addLabel("daylight",     5.4);
 
       const skyProxy = { p: 0 };
       const updateSky = () => setSkyBg(
@@ -215,78 +205,46 @@ function HeroScene() {
         getSkyColor(SKY_STAGES, skyProxy.p, "mid"),
         getSkyColor(SKY_STAGES, skyProxy.p, "bot"),
       );
-      tl.to(skyProxy, { p: 1, duration: 2.2, ease: "none", onUpdate: updateSky }, 0);
-      tl.to(skyProxy, { p: 2, duration: 1.8, ease: "none", onUpdate: updateSky }, 2.2);
-      tl.to(skyProxy, { p: 3, duration: 1.8, ease: "none", onUpdate: updateSky }, 4.0);
-      tl.to(skyProxy, { p: 4, duration: 1.8, ease: "none", onUpdate: updateSky }, 5.8);
+      tl.to(skyProxy, { p: 4, duration: 5.4, ease: "power1.inOut", onUpdate: updateSky }, 0);
 
       /* ── STARS: staggered three-group fade ── */
       tl.to(".stars-a", { y: "-6vh", ease: "none", duration: TL_END }, 0);
       tl.to(".stars-b", { y: "-5vh", ease: "none", duration: TL_END }, 0);
       tl.to(".stars-c", { y: "-4vh", ease: "none", duration: TL_END }, 0);
-      tl.to(".stars-a", { autoAlpha: 0.5, ease: "none", duration: 1.0 }, "predawn")
-        .to(".stars-a", { autoAlpha: 0, ease: "none", duration: 1.2 }, "dawn");
-      tl.to(".stars-b", { autoAlpha: 0.4, ease: "none", duration: 1.0 }, "predawn+=0.3")
-        .to(".stars-b", { autoAlpha: 0, ease: "none", duration: 1.0 }, "dawn+=0.2");
-      tl.to(".stars-c", { autoAlpha: 0.3, ease: "none", duration: 1.2 }, "predawn+=0.7")
-        .to(".stars-c", { autoAlpha: 0, ease: "none", duration: 0.8 }, "dawn+=0.5");
+      tl.to(".stars-a", { autoAlpha: 0, ease: "power1.inOut", duration: 2.2 }, "predawn+=0.2");
+      tl.to(".stars-b", { autoAlpha: 0, ease: "power1.inOut", duration: 2.4 }, "predawn+=0.45");
+      tl.to(".stars-c", { autoAlpha: 0, ease: "power1.inOut", duration: 2.6 }, "predawn+=0.7");
 
-      /* ── MOON: stays high until lateNight, then descends physically ── */
-      tl.to(".moon", { y: "140vh", ease: "power1.in", duration: 5.5 }, "lateNight");
-      tl.to(".moon", { autoAlpha: 0.5, ease: "none", duration: 0.8 }, "dawn+=0.8")
-        .to(".moon", { autoAlpha: 0,   ease: "none", duration: 0.6 }, "earlyMorning-=0.3");
+      /* ── MOON: descends as predawn gives way to daylight ── */
+      tl.to(".moon", { y: "105vh", autoAlpha: 0, ease: "power1.inOut", duration: 4.2 }, "predawn");
 
       /* ── HORIZON GLOW: begins faint at predawn, peaks at dawn, reduces at morning ── */
-      tl.to(".horizon-glow", { autoAlpha: 0.18, ease: "power1.out", duration: 1.5 }, "predawn+=0.5");
-      tl.to(".horizon-glow", { autoAlpha: 1,    ease: "power1.out", duration: 1.5 }, "dawn");
-      tl.to(".horizon-glow", { autoAlpha: 0.18, ease: "power1.in",  duration: 2.0 }, "earlyMorning+=0.5");
-      tl.to(".horizon-glow", { autoAlpha: 0,    ease: "power1.in",  duration: 1.5 }, "daylight+=0.5");
+      tl.to(".horizon-glow", { autoAlpha: 0.46, ease: "power1.inOut", duration: 2.45 }, 0.05);
+      tl.to(".horizon-glow", { autoAlpha: 0,    ease: "power1.inOut", duration: 1.4 }, "daylight-=0.1");
 
-      tl.to(".sun-orb", { autoAlpha: 0.22, ease: "power1.out", duration: 1.2 }, "dawn");
-      tl.to(".sun-orb", { y: "30vh", ease: "power2.out", duration: 1.8 }, "dawn");
-      tl.to(".sun-orb", { y: 0, autoAlpha: 1, ease: "power1.out", duration: 2.2 }, "earlyMorning");
-      tl.to(".sun-rays", { autoAlpha: 0.75, scale: 1, ease: "power2.out", duration: 2.0 }, "earlyMorning+=0.8");
+      tl.to(".sun-orb", { y: 0, autoAlpha: 1, ease: "power1.inOut", duration: 5.7 }, 0);
+      tl.to(".sun-rays", { autoAlpha: 0.36, scale: 0.94, ease: "power1.inOut", duration: 1.7 }, "daylight-=0.3");
 
-      tl.to(".cloud-back", { autoAlpha: 0.28, y: 10, ease: "power1.out", duration: 2.2 }, "predawn+=0.5");
-      tl.to(".cloud-back", { autoAlpha: 0.80, y: 0,  ease: "power1.out", duration: 1.8 }, "earlyMorning");
-      tl.to(".cloud-mid",  { autoAlpha: 0.55, y: 0,  ease: "power1.out", duration: 1.8, stagger: 0.4 }, "dawn+=0.8");
-      tl.to(".cloud-mid",  { autoAlpha: 1.0,         ease: "power1.out", duration: 1.5 }, "daylight");
-      tl.to(".cloud-front", { autoAlpha: 0.80, y: 0, ease: "power1.out", duration: 2.2 }, "earlyMorning+=1.2");
-      tl.to(".cloud-back",  { x: 15, ease: "none", duration: TL_END }, 0);
-      tl.to(".cloud-mid",   { x: -20, ease: "none", duration: TL_END }, 0);
-      tl.to(".cloud-front", { x: 25,  ease: "none", duration: TL_END }, 0);
-      tl.to(".atmos-day", { autoAlpha: 1, ease: "power1.out", duration: 2.5 }, "earlyMorning");
+      tl.to(".cloud-back",  { autoAlpha: 0.38, y: 6,  ease: "power1.inOut", duration: 2.8 }, "dawn+=0.35");
+      tl.to(".cloud-mid",   { autoAlpha: 0.52, y: 4,  ease: "power1.inOut", duration: 2.5, stagger: 0.18 }, "earlyMorning-=0.1");
+      tl.to(".cloud-front", { autoAlpha: 0.42, y: 4,  ease: "power1.inOut", duration: 1.8 }, "daylight-=0.15");
+      tl.to(".cloud-back",  { x: 6,  ease: "none", duration: TL_END }, 0);
+      tl.to(".cloud-mid",   { x: -8, ease: "none", duration: TL_END }, 0);
+      tl.to(".cloud-front", { x: 10, ease: "none", duration: TL_END }, 0);
+      tl.to(".atmos-day", { autoAlpha: 0.72, ease: "power1.inOut", duration: 2.4 }, "earlyMorning-=0.2");
+      tl.to(".hero-bottom-fade", { autoAlpha: 1, ease: "power1.inOut", duration: 2.2 }, "earlyMorning-=0.4");
 
       /* ── HEADLINE drifts up ── */
-      tl.to(".headline-block", { y: "-5vh", ease: "none", duration: TL_END }, 0);
-
-      /* ── TASK LABELS coordinated with copy ── */
-      tl.to(".task-social", { autoAlpha: 1, y: 0, ease: "power2.out", duration: 0.6 }, "lateNight");
-      tl.to(".task-email",  { autoAlpha: 1, y: 0, ease: "power2.out", duration: 0.6 }, "predawn");
-      tl.to([".task-website", ".task-social", ".task-email"], {
-        autoAlpha: 0, y: -12, ease: "power1.in", duration: 0.8,
-      }, "daylight-=0.4");
-      tl.to(".task-handled", { autoAlpha: 1, ease: "power2.out", duration: 0.6 }, "daylight+=0.2");
-
-      tl.to(".copy-night",     { autoAlpha: 0, y: -14, ease: "power1.in",  duration: 0.55 }, "lateNight-=0.10");
-      tl.to(".copy-latenight", { autoAlpha: 1, y: 0,   ease: "power2.out", duration: 0.55 }, "lateNight");
-      tl.to(".copy-latenight", { autoAlpha: 0, y: -14, ease: "power1.in",  duration: 0.55 }, "predawn-=0.12");
-      tl.to(".copy-predawn",   { autoAlpha: 1, y: 0,   ease: "power2.out", duration: 0.55 }, "predawn");
-      tl.to(".copy-predawn",   { autoAlpha: 0, y: -14, ease: "power1.in",  duration: 0.55 }, "dawn-=0.12");
-      tl.to(".copy-dawn",      { autoAlpha: 1, y: 0,   ease: "power2.out", duration: 0.55 }, "dawn");
-      tl.to(".copy-dawn",      { autoAlpha: 0, y: -14, ease: "power1.in",  duration: 0.60 }, "earlyMorning-=0.15");
-      tl.to(".copy-morning",   { autoAlpha: 1, y: 0,   ease: "power2.out", duration: 1.0  }, "earlyMorning+=0.1");
-      tl.to(".hero-cta",       { autoAlpha: 1, y: 0,   ease: "power2.out", duration: 0.8  }, "daylight");
+      tl.to(".headline-block", { y: "-1.5vh", ease: "none", duration: TL_END }, 0);
+      tl.to([".night-note", ".scroll-cue"], { autoAlpha: 0, y: -6, ease: "power1.inOut", duration: 1.4 }, "dawn-=0.25");
 
       /* ── ScrollTrigger ── */
       ScrollTrigger.create({
         animation:     tl,
         trigger:       scene,
         start:         "top top",
-        end:           scrollDist,
-        pin:           true,
-        scrub:         1.2,
-        anticipatePin: 1,
+        end:           "bottom top",
+        scrub:         1.8,
       });
     }, scene);
 
@@ -484,6 +442,13 @@ function HeroScene() {
         </svg>
       </div>
 
+      <div className="hero-bottom-fade" style={{
+        position: "absolute", left: 0, right: 0, bottom: "-1px", zIndex: 12,
+        height: "42vh",
+        background: "linear-gradient(180deg, rgba(120,201,242,0) 0%, rgba(120,201,242,0.18) 34%, rgba(120,201,242,0.72) 76%, #78C9F2 100%)",
+        pointerEvents: "none", willChange: "opacity",
+      }} />
+
       {/* ── HEADLINE ── */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 20,
@@ -507,94 +472,17 @@ function HeroScene() {
         </div>
       </div>
 
-      {/* ── COPY MESSAGES — 5-state story ── */}
+      {/* ── NIGHT NOTE ── */}
       <div style={{ position: "absolute", bottom: "clamp(44px, 8vh, 88px)", left: "clamp(24px, 6vw, 80px)", zIndex: 30 }}>
-        {/* Night */}
-        <div className="copy-night" data-night style={{ willChange: "transform, opacity" }}>
+        <div className="night-note" data-night style={{ willChange: "transform, opacity" }}>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "clamp(13px, 1.2vw, 16px)", color: "rgba(255,255,255,0.55)", letterSpacing: "0.05em", lineHeight: 1.6, margin: 0 }}>
             YOU CAN SWITCH OFF.
           </p>
         </div>
-        {/* Late night */}
-        <div className="copy-latenight" style={{ position: "absolute", bottom: 0, left: 0, willChange: "transform, opacity", pointerEvents: "none" }}>
-          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "clamp(13px, 1.2vw, 16px)", color: "rgba(255,255,255,0.60)", letterSpacing: "0.05em", lineHeight: 1.6, margin: 0 }}>
-            WE'RE STILL ON.
-          </p>
-        </div>
-        {/* Predawn */}
-        <div className="copy-predawn" style={{ position: "absolute", bottom: 0, left: 0, willChange: "transform, opacity", pointerEvents: "none" }}>
-          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "clamp(13px, 1.2vw, 16px)", color: "rgba(255,255,255,0.60)", letterSpacing: "0.05em", lineHeight: 1.6, margin: 0 }}>
-            YOUR DIGITAL WORK<br />KEEPS MOVING.
-          </p>
-        </div>
-        {/* Dawn */}
-        <div className="copy-dawn" style={{ position: "absolute", bottom: 0, left: 0, willChange: "transform, opacity", pointerEvents: "none" }}>
-          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "clamp(11px, 1.1vw, 14px)", letterSpacing: "0.1em", color: "rgba(255,255,255,0.62)", textTransform: "uppercase", lineHeight: 1.8, margin: 0, whiteSpace: "nowrap" }}>
-            WHILE YOU WERE AWAY,<br />THINGS GOT DONE.
-          </p>
-        </div>
-        <div className="copy-morning" data-morning style={{ position: "absolute", bottom: 0, left: 0, willChange: "transform, opacity", maxWidth: "clamp(300px, 40vw, 520px)" }}>
-          <p style={{ fontFamily: "Bricolage Grotesque, sans-serif", fontWeight: 800, fontSize: "clamp(20px, 2.6vw, 40px)", letterSpacing: "-0.03em", color: "#fff", margin: "0 0 12px", lineHeight: 1.1 }}>
-            WAKE UP TO PROGRESS.
-          </p>
-          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "clamp(13px, 1.1vw, 15px)", color: "rgba(255,255,255,0.65)", lineHeight: 1.65, margin: "0 0 24px", maxWidth: "340px" }}>
-            A subscription-based digital partner that quietly handles your website, content and email—so you can focus on everything else.
-          </p>
-          <div className="hero-cta" style={{ display: "flex", flexWrap: "wrap", gap: "12px", pointerEvents: "auto", willChange: "transform, opacity" }}>
-            <Link to="/how-it-works" style={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, letterSpacing: "0.04em", color: "#000", background: "#fff", padding: "14px 24px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-              VIEW PLANS <span>→</span>
-            </Link>
-            <Link to="/how-it-works" style={{ fontFamily: "Inter, sans-serif", fontSize: "13px", letterSpacing: "0.04em", color: "rgba(255,255,255,0.75)", background: "transparent", border: "1px solid rgba(255,255,255,0.3)", padding: "14px 24px", display: "inline-flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
-              SEE HOW IT WORKS ↓
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── TASK LABELS ── */}
-      <div style={{ position: "absolute", top: "clamp(80px, 12vh, 140px)", right: "clamp(24px, 6vw, 80px)", zIndex: 30, display: "flex", flexDirection: "column", gap: "18px", alignItems: "flex-end" }}>
-        <div className="task-website" style={{ willChange: "transform, opacity" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "3px", alignItems: "flex-end" }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.18em", color: "#ed4e00", textTransform: "uppercase" }}>11:42 PM</span>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, letterSpacing: "0.1em", color: "rgba(255,255,255,0.78)", textTransform: "uppercase" }}>Website Update</span>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.12em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>In Progress</span>
-          </div>
-        </div>
-        <div className="task-social" style={{ willChange: "transform, opacity" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "3px", alignItems: "flex-end" }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.18em", color: "#ed4e00", textTransform: "uppercase" }}>01:16 AM</span>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, letterSpacing: "0.1em", color: "rgba(255,255,255,0.78)", textTransform: "uppercase" }}>Social Content</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-              <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#ed4e00", flexShrink: 0 }} />
-              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.12em", color: "#ed4e00", textTransform: "uppercase" }}>Ready ✓</span>
-            </div>
-          </div>
-        </div>
-        <div className="task-email" style={{ willChange: "transform, opacity" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "3px", alignItems: "flex-end" }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.18em", color: "#ed4e00", textTransform: "uppercase" }}>03:48 AM</span>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, letterSpacing: "0.1em", color: "rgba(255,255,255,0.78)", textTransform: "uppercase" }}>Newsletter</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-              <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#ed4e00", flexShrink: 0 }} />
-              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.12em", color: "#ed4e00", textTransform: "uppercase" }}>Sent ✓</span>
-            </div>
-          </div>
-        </div>
-        <div className="task-handled" style={{ willChange: "opacity", display: "flex", flexDirection: "column", gap: "14px", alignItems: "flex-end" }}>
-          {["Website Update", "Social Content", "Newsletter"].map((t) => (
-            <div key={t} style={{ display: "flex", flexDirection: "column", gap: "3px", alignItems: "flex-end" }}>
-              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "11px", fontWeight: 600, letterSpacing: "0.1em", color: "rgba(255,255,255,0.78)", textTransform: "uppercase" }}>{t}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#ed4e00", flexShrink: 0 }} />
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.12em", color: "#ed4e00", textTransform: "uppercase" }}>Handled ✓</span>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Scroll cue */}
-      <div className="copy-night" style={{ position: "absolute", bottom: "20px", left: "50%", transform: "translateX(-50%)", zIndex: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", pointerEvents: "none" }}>
+      <div className="scroll-cue" style={{ position: "absolute", bottom: "20px", left: "50%", transform: "translateX(-50%)", zIndex: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", pointerEvents: "none", willChange: "transform, opacity" }}>
         <div style={{ width: "1px", height: "28px", background: "rgba(255,255,255,0.18)" }} />
         <span style={{ fontFamily: "Inter, sans-serif", fontSize: "9px", letterSpacing: "0.2em", color: "rgba(255,255,255,0.18)", textTransform: "uppercase" }}>Scroll</span>
       </div>
@@ -635,13 +523,16 @@ export default function Home() {
         <HeroScene />
       </div>
 
-      {/* ═══════════════ MARQUEE — BLACK ═══════════════ */}
-      <div data-section="marquee">
-        <Marquee text="WEBSITE MAINTENANCE — SOCIAL CONTENT — EMAIL MARKETING — ON IDLE — ALWAYS HANDLED —" variant="blue" />
-      </div>
-
       {/* ═══════════════ PROBLEM → RELIEF — WHITE ═══════════════ */}
-      <section ref={problemRef.ref} style={{ background: "#fff", padding: "140px 80px" }}>
+      <section
+        ref={problemRef.ref}
+        data-section="hero-to-white"
+        style={{
+          marginTop: "-1px",
+          background: "linear-gradient(180deg, #78C9F2 0%, #78C9F2 62%, #A9E4FA 74%, #DDF5FF 87%, #F8FDFF 96%, #fff 100%)",
+          padding: "200px 80px 170px",
+        }}
+      >
         <div style={{ maxWidth: "900px" }}>
           {[
             { text: "Websites go outdated.", color: "rgba(0,0,0,0.2)" },
@@ -877,6 +768,11 @@ export default function Home() {
           idle.
         </div>
       </section>
+
+      {/* ═══════════════ MARQUEE — BEFORE FOOTER ═══════════════ */}
+      <div data-section="marquee">
+        <Marquee text="WEBSITE MAINTENANCE - SOCIAL CONTENT - EMAIL MARKETING - ON IDLE - ALWAYS HANDLED -" variant="blue" />
+      </div>
     </div>
   );
 }
